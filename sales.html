@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أوامر المبيعات | ASGate CRM</title>
+    <meta name="description" content="إدارة أوامر المبيعات والفواتير ومتابعة حالات الدفع والتسليم والتنفيذ في نظام ASGate CRM.">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="shortcut icon" href="./favicon.ico">
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js",
+        "chart.js/auto": "https://esm.sh/chart.js@4.4.6/auto",
+        "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+        "xlsx": "https://esm.sh/xlsx@0.18.5"
+      }
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        #navbarPlaceholder {
+            height: 58px;
+            min-height: 58px;
+            max-height: 58px;
+            flex-shrink: 0;
+            width: 100%;
+            background: #ffffff;
+            display: block;
+            box-sizing: border-box;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            opacity: 1 !important;
+        }
+        .table-wrapper { min-height: 200px; }
+        .order-link {
+            color: #2563eb;
+            font-weight: 700;
+            font-size: 11px;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: 0.2s;
+            display: inline-block;
+        }
+        .order-link:hover {
+            background: #eff6ff;
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+    </style>
+    <link rel="stylesheet" href="./sales.css">
+</head>
+<body>
+
+<div class="dashboard-container">
+    <div id="navbarPlaceholder"></div>
+
+    <div class="main-content">
+        <div class="action-bar">
+            <button class="btn-top btn-add" onclick="openOrderModal()">
+                <i class="fas fa-plus"></i> إنشاء طلب مبيعات جديد
+            </button>
+            <div class="search-wrapper">
+                <input type="text" id="globalSearch" class="search-input" placeholder="بحث في المبيعات 🔍" onkeyup="filterSalesTable()">
+            </div>
+            
+            <div class="stats-bar-visit" id="statsContainer">
+                <div class="stat-item">إجمالي الطلبات: <span id="count-total" class="stat-val">0</span></div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">طلبات الشهر: <span id="month-count" class="stat-val">0</span></div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">مكتمل: <span id="sum-completed" class="stat-val" style="color: #16a34a; background: var(--bg-success-light);">0.00</span></div>
+                <div class="stat-item">معلق: <span id="sum-pending" class="stat-val" style="color: #ea580c; background: var(--bg-warning-light);">0.00</span></div>
+                <div class="stat-divider">|</div>
+                <div class="stat-item">مكتمل الشهر: <span id="month-completed" class="stat-val" style="color: #16a34a; background: var(--bg-success-light);">0.00</span></div>
+                <div class="stat-item">معلق الشهر: <span id="month-pending" class="stat-val" style="color: #ea580c; background: var(--bg-warning-light);">0.00</span></div>
+                
+                <button onclick="toggleStatsVisibility()" id="eyeToggleBtn" class="eye-toggle-btn" title="إخفاء / إظهار الأرقام">
+                    <svg class="eye-icon eye-show-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path>
+                        <circle cx="12" cy="12" r="3.2"></circle>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="bulk-action-wrapper">
+                <button type="button" id="bulkActionBtn" class="btn-bulk-trigger" onclick="toggleDropdown(event, this)">
+                    <span>إجراءات جماعية</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div id="bulkActionMenu" class="dropdown-menu">
+                    <button type="button" onclick="handleBulkAction('تغيير المستخدم')"><i class="fas fa-user-edit"></i> تغيير المستخدم</button>
+                    <button type="button" onclick="handleBulkAction('استيراد')"><i class="fas fa-file-import"></i> استيراد من Excel</button>
+                    <button type="button" onclick="handleBulkAction('تصدير')"><i class="fas fa-file-excel"></i> تصدير إلى Excel</button>
+                    <button type="button" onclick="handleBulkAction('طباعة')"><i class="fas fa-print"></i> طباعة</button>
+                    <hr class="dropdown-divider">
+                    <button type="button" class="del-btn" onclick="handleBulkAction('حذف المحدد')"><i class="fas fa-trash-alt"></i> حذف المحدد</button>
+                </div>
+            </div>
+            
+            <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelImport(event)">
+        </div>
+        
+        <div class="table-wrapper">
+            <table id="salesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 3%;">
+                            <input type="checkbox" class="select-check" id="masterCheckbox" onclick="toggleAllCheckboxes(this)">
+                        </th>
+                        <th style="width: 7%;">رقم الطلب</th>
+                        <th style="width: 17%;">اسم الطلب</th>
+                        <th style="width: 8%;">تاريخ الإنشاء</th>
+                        <th style="width: 14%;">الشركة</th>
+                        <th style="width: 8%;">السجل التجاري</th>
+                        <th style="width: 8%;">
+                            <div class="custom-filter-wrapper">
+                                <div class="filter-title" onclick="toggleCustomFilter(event, 'statusFilterMenu')">
+                                    الحالة <i class="fas fa-caret-down filter-arrow"></i>
+                                    <span class="filter-dot" id="statusFilterDot"></span>
+                                </div>
+                                <div id="statusFilterMenu" class="multi-select-menu" onclick="event.stopPropagation()">
+                                    <div style="display: flex; gap: 4px; padding: 2px 4px 6px 4px; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px;">
+                                        <button type="button" onclick="selectAllFilter('statusFilterMenu')" style="flex:1; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:4px; padding:3px; font-size:9px; font-weight:700; cursor:pointer; font-family:Cairo;">الكل</button>
+                                        <button type="button" onclick="clearAllFilter('statusFilterMenu')" style="flex:1; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:4px; padding:3px; font-size:9px; font-weight:700; cursor:pointer; font-family:Cairo;">تفريغ</button>
+                                    </div>
+                                    <div id="statusFilterItemsContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
+                                </div>
+                            </div>
+                        </th>
+                        <th style="width: 11%;">ملاحظة</th>
+                        <th style="width: 6%;">مكتمل (ر.س)</th>
+                        <th style="width: 6%;">معلق (ر.س)</th>
+                        <th style="width: 6%;">تاريخ التعديل</th>
+                        <th style="width: 6%;">
+                            <div class="custom-filter-wrapper">
+                                <div class="filter-title" onclick="toggleCustomFilter(event, 'userFilterMenu')">
+                                    المستخدم <i class="fas fa-caret-down filter-arrow"></i>
+                                    <span class="filter-dot" id="userFilterDot"></span>
+                                </div>
+                                <div id="userFilterMenu" class="multi-select-menu" onclick="event.stopPropagation()">
+                                    <div style="display: flex; gap: 4px; padding: 2px 4px 6px 4px; border-bottom: 1px solid #f1f5f9; margin-bottom: 4px;">
+                                        <button type="button" onclick="selectAllFilter('userFilterMenu')" style="flex:1; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:4px; padding:3px; font-size:9px; font-weight:700; cursor:pointer; font-family:Cairo;">الكل</button>
+                                        <button type="button" onclick="clearAllFilter('userFilterMenu')" style="flex:1; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:4px; padding:3px; font-size:9px; font-weight:700; cursor:pointer; font-family:Cairo;">تفريغ</button>
+                                    </div>
+                                    <div id="userFilterItemsContainer" style="display:flex; flex-direction:column; gap:2px;"></div>
+                                </div>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="salesBody"></tbody>
+            </table>
+        </div>
+
+        <div id="activityLogSection" class="activity-log-section">
+            <div class="activity-log-header-container">
+                <div class="activity-log-title"><i class="fas fa-history"></i> سجل نشاط المبيعات</div>
+                <button id="toggleExpandBtn" class="btn-toggle-expand" onclick="toggleLogExpansion()" title="توسيع / تقليص">
+                    <i class="fas fa-expand-alt"></i>
+                </button>
+            </div>
+            <div id="activityList" class="activity-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال إنشاء طلب جديد -->
+<div id="orderModal" class="modal">
+    <div class="modal-content-box" id="orderModalCard">
+        <div style="font-weight: 800; font-size:14px; color: var(--text-dark); margin-bottom: 20px; text-align: center; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="fas fa-file-invoice-dollar" style="color:var(--accent-blue)"></i> إنشاء طلب مبيعات جديد
+        </div>
+        <div class="form-group">
+            <label>البحث بالاسم أو السجل التجاري</label>
+            <input type="text" id="mSearchField" onkeyup="searchCustomerInModal(this)" placeholder="ابحث عن عميل موجود..." autocomplete="off">
+            <div id="mResults" class="modal-results"></div>
+        </div>
+        <div class="form-group">
+            <label>الشركة</label>
+            <input type="text" id="mComp" readonly style="background:var(--bg-color); color:var(--text-muted); cursor:not-allowed;">
+        </div>
+        <div class="form-group">
+            <label>السجل التجاري</label>
+            <input type="text" id="mCr" readonly style="background:var(--bg-color); color:var(--text-muted); cursor:not-allowed;">
+        </div>
+        <div class="form-group">
+            <label>اسم الطلب</label>
+            <input type="text" id="mType" placeholder="مثال: توريد وتجهيز سنترال وباقات اتصالات">
+        </div>
+        <div style="display:flex; justify-content: flex-end; gap:10px; margin-top:10px;">
+            <button onclick="closeOrderModal()" style="flex:1; background:var(--bg-color); border:1px solid var(--border-soft); color:var(--text-dark); padding:10px; border-radius:8px; cursor:pointer; font-family:Cairo; font-size:12px; font-weight:700; transition:0.2s;">إلغاء</button>
+            <button onclick="addOrderRow()" style="flex:1; background:var(--accent-blue); border:none; color:white; padding:10px; border-radius:8px; cursor:pointer; font-family:Cairo; font-size:12px; font-weight:800; transition:0.2s; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);">إضافة الطلب</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./navbar.js"></script>
+<script type="module" src="./sales.js"></script>
+</body>
+</html>

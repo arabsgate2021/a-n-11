@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التذكيرات والمفكرة | ASGate CRM</title>
+    <meta name="description" content="إدارة المواعيد والتذكيرات والمفكرة السريعة في نظام ASGate CRM">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="shortcut icon" href="./favicon.ico">
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js",
+        "chart.js/auto": "https://esm.sh/chart.js@4.4.6/auto",
+        "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+        "xlsx": "https://esm.sh/xlsx@0.18.5"
+      }
+    }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./main.css">
+    <link rel="stylesheet" href="./reminders.css">
+    
+    <style>
+        * { box-sizing: border-box; }
+        #navbarPlaceholder {
+            height: 58px;
+            min-height: 58px;
+            max-height: 58px;
+            flex-shrink: 0;
+            width: 100%;
+            background: #ffffff;
+            display: block;
+            box-sizing: border-box;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            opacity: 1 !important;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: var(--bg-input, #f8fafc);">
+
+<div class="dashboard-container">    
+    <div id="navbarPlaceholder"></div>
+
+    <div class="reminders-container">
+        <div class="reminders-top-bar">
+            <div class="reminders-header-title">
+                <i class="fas fa-calendar-check" style="color: #2563eb;"></i>
+                <span>مفكرة التذكيرات والمواعيد الهامة (12 مذكرة ذكية)</span>
+            </div>
+            <div class="reminders-bar-actions">
+                <button type="button" class="btn-sort-reminders" id="sortRemindersBtn" title="ترتيب المذكرات حسب الأقرب تاريخاً">
+                    <i class="fas fa-sort-amount-down"></i> ترتيب زمني
+                </button>
+                <div id="syncStatus" class="reminders-sync-badge sync-saved">
+                    <i class="fas fa-check-circle"></i>
+                    <span>جاهز ومحفوظ محلياً</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="reminders-grid" id="remindersGrid">
+            <!-- يتم توليد الـ 12 مذكرة برمجياً -->
+        </div>
+    </div>
+</div>
+
+<!-- التقويم المتحرك المخصص -->
+<div class="calendar-overlay" id="calendarOverlay" role="dialog" aria-modal="true">
+    <div class="custom-datepicker">
+        <div class="datepicker-header">
+            <div class="month-nav">
+                <i class="fas fa-chevron-left month-nav-btn" id="prevMonthBtn" title="الشهر السابق"></i>
+                <select id="calMonthSelect" class="datepicker-select"></select>
+                <i class="fas fa-chevron-right month-nav-btn" id="nextMonthBtn" title="الشهر التالي"></i>
+            </div>
+            <select id="calYearSelect" class="datepicker-select"></select>
+        </div>
+
+        <div class="weekdays-grid">
+            <span>أحد</span>
+            <span>إثنين</span>
+            <span>ثلاثاء</span>
+            <span>أربعاء</span>
+            <span>خميس</span>
+            <span class="weekend-day">جمعة</span>
+            <span class="weekend-day">سبت</span>
+        </div>
+
+        <div class="days-container">
+            <div class="days-grid" id="calDaysGrid">
+            </div>
+        </div>
+
+        <div class="datepicker-footer">
+            <button type="button" class="btn-cancel" id="calCancelBtn">إلغاء</button>
+            <div class="action-buttons">
+                <button type="button" class="btn-clear-date" id="calClearBtn">مسح</button>
+                <button type="button" class="btn-next" id="calNextBtn">تأكيد</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تأكيد الحذف المخصصة -->
+<div class="confirm-overlay" id="confirmOverlay" role="dialog" aria-modal="true">
+    <div class="confirm-modal">
+        <div style="font-size: 28px; color: #ef4444; margin-bottom: 8px;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 style="margin-top: 0; font-family: 'Cairo', sans-serif; color: var(--text-main, #0f172a); font-size: 16px;">تأكيد مسح المذكرة</h3>
+        <p style="font-family: 'Cairo', sans-serif; font-size: 13px; color: var(--text-muted, #475569); margin-bottom: 20px;">هل أنت متأكد من تفريغ كافة بيانات هذه المذكرة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+        <div class="confirm-actions">
+            <button type="button" class="btn-cancel-delete" id="cancelDeleteBtn">إلغاء</button>
+            <button type="button" class="btn-confirm-delete" id="confirmDeleteBtn">مسح الآن</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./navbar.js"></script>
+<script type="module" src="./reminders.js"></script>
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تفاصيل الطلب | ASGate CRM</title>
+    <meta name="description" content="إدارة تفاصيل وبنود أمر المبيعات والسريالات في نظام ASGate CRM">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="shortcut icon" href="./favicon.ico">
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js",
+        "chart.js/auto": "https://esm.sh/chart.js@4.4.6/auto",
+        "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+        "xlsx": "https://esm.sh/xlsx@0.18.5"
+      }
+    }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./main.css">
+    <link rel="stylesheet" href="./order_details.css">
+</head>
+<body>
+    <div id="navbarPlaceholder"></div>
+
+    <!-- الشريط العلوي الموحد -->
+    <nav class="navbar" style="position: sticky; top: 0; z-index: 1000;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+            <a href="sales.html" class="btn-back-nav"><i class="fas fa-arrow-right"></i> رجوع للمبيعات</a>
+            <div style="color:white; font-weight:800; font-size:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-file-invoice-dollar" style="color:#60a5fa;"></i> تفاصيل طلب المبيعات
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <a href="./index.html" style="color:#cbd5e1; font-size:12px; font-weight:700; text-decoration:none;"><i class="fas fa-home"></i> الرئيسية</a>
+                <div style="color:#94a3b8; font-size:11px; font-weight:700;">
+                    نظام ASGate CRM
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- منطقة معلومات الطلب وأزرار الإجراءات والبحث -->
+        <div class="sticky-top-section">
+            <div class="header-section-wrapper">
+                <div class="order-header-info">
+                    <div class="info-item"><span class="info-label">رقم الطلب</span><span class="info-value" id="orderId">#0000</span></div>
+                    <div class="info-item info-item-highlight"><span class="info-label">اسم الطلب</span><span class="info-value" id="orderType">-</span></div>
+                    <div class="info-item"><span class="info-label">الشركة</span><span class="info-value" id="orderComp">-</span></div>
+                    <div class="info-item"><span class="info-label">السجل التجاري</span><span class="info-value" id="orderCr">-</span></div>
+                    <div class="info-item"><span class="info-label">حالة الطلب</span><span class="info-value" id="orderStatus">-</span></div>
+                    <div class="info-item"><span class="info-label">قيمة الطلب</span><span class="info-value" id="orderTotalSum">0.0 ر.س</span></div>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn btn-add" onclick="window.openModal()">+ إضافة منتج جديد</button>
+                    <button class="btn btn-paste-excel" onclick="window.openPasteExcelModal()" style="background:#0284c7; color:#fff; display:inline-flex; align-items:center; gap:5px; height:32px; border:none; padding:0 12px; border-radius:8px; font-weight:700; font-size:11px; cursor:pointer;" title="لصق بيانات وأعمدة منسوجة من ملف إكسيل"><i class="fas fa-paste"></i> لصق من إكسيل</button>
+                </div>
+                <div class="search-wrapper">
+                    <input type="text" id="liveSearch" class="search-input" placeholder="بحث بالسريال أو الخدمة أو هوية المستخدم..." onkeyup="window.applyFilters()">
+                    <button class="btn-global-notes" id="globalNotesBtn" onclick="window.openGlobalNote()" title="سجل ملاحظات تفاصيل الطلب"><i class="fas fa-envelope"></i></button>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stats-box right-box">
+                        <span class="stat-label">الاجمالي</span>
+                        <span>مكتمل: <span id="stat_total_ok" class="stat-val-green">0.0</span></span>
+                        <span>معلق: <span id="stat_total_wait" class="stat-val-orange">0.0</span></span>
+                    </div>
+                    <div class="stats-box left-box">
+                        <span class="stat-label">الشهر</span>
+                        <span>مكتمل: <span id="stat_month_ok" class="stat-val-green">0.0</span></span>
+                        <span>معلق: <span id="stat_month_wait" class="stat-val-orange">0.0</span></span>
+                    </div>
+                </div>
+
+                <!-- زر الإجراءات المحدث -->
+                <div class="dropdown">
+                    <button class="btn-action">إجراءات جماعية ⚙️</button>
+                    <div class="dropdown-content">
+                        <button onclick="document.getElementById('excelFileInput').click()">استيراد من إكسيل</button>
+                        <button onclick="window.openPasteExcelModal()"><i class="fas fa-paste"></i> لصق من إكسيل</button>
+                        <button onclick="window.copySelectedToExcelClipboard()"><i class="fas fa-copy"></i> نسخ المحدد لإكسيل (Clipboard)</button>
+                        <button onclick="window.triggerActionLog('تصدير Excel')">تصدير إكسيل</button>
+                        <button onclick="window.triggerActionLog('طباعة')">طباعة</button>
+                        <button style="color:red;" onclick="window.triggerActionLog('حذف المحدد')">حذف المحدد</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- حاوية الجدول المتكاملة مع تجميد رأس الجدول (الأخضر) وتجميد تذييل المجاميع (الأسود) -->
+        <div class="table-wrapper">
+            <div class="table-body-scroll" id="tableBodyScroll">
+                <table id="mainTable">
+                    <thead>
+                        <tr id="dynamicHeader"></tr>
+                    </thead>
+                    <tbody id="productsBody"></tbody>
+                </table>
+            </div>
+            
+            <!-- الصف الأسود مجمد وثابت بالأسفل دائماً فوق سجل النشاط مباشرة -->
+            <div class="table-footer-container" id="tableFooterContainer">
+                <table class="table-footer-table">
+                    <tfoot>
+                        <tr class="table-footer">
+                            <td id="f_selection" style="width: 35px;">0</td> 
+                            <td id="f_count" style="width: 100px;">0</td>
+                            <td style="width: 180px;"></td>
+                            <td id="f_qty" style="width: 50px;">0</td>
+                            <td id="f_sub" style="width: 80px;">0.0</td>
+                            <td id="f_total" style="width: 85px;">0.0</td>
+                            <td style="width: 155px;"></td>
+                            <td style="width: 145px;"></td>
+                            <td style="width: 145px;"></td>
+                            <td style="width: 110px;"></td>
+                            <td style="width: 90px;"></td>
+                            <td style="min-width: 120px;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- سجل النشاط الرئيسي مثبت في أسفل الشاشة -->
+        <div id="activityLogSection" class="activity-log-section">
+            <div class="activity-log-header-container">
+                <div class="activity-log-title"><i class="fas fa-history"></i> سجل النشاط</div>
+                <button id="toggleExpandBtn" class="btn-toggle-expand" onclick="window.toggleLogExpansion()" title="توسيع / تقليص"><i class="fas fa-expand-alt"></i></button>
+            </div>
+            <div id="activityList" class="activity-list"></div>
+        </div>
+    </div>
+
+    <!-- حقل مخفي لرفع ملف الإكسيل للاستيراد -->
+    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display:none;" onchange="window.handleExcelImport(event)">
+
+    <!-- نافذة الملاحظات المنبثقة -->
+    <div id="noteModal" class="modal-notes" onclick="if(event.target === this) window.closeGlobalNote()">
+        <div class="modal-notes-content">
+            <div style="font-weight: 800; color: #1e293b; font-size:14px; margin-bottom: 15px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-sticky-note" style="color:var(--accent-blue)"></i> سجل ملاحظات الطلب
+            </div>
+            <div id="historyLog" class="history-log"></div>
+            
+            <textarea id="modalTextArea" class="note-area" placeholder="أدخل تفاصيل الملاحظة هنا..."></textarea>
+            <input type="file" id="fileUploadInput" onchange="window.handleFileUpload(event)" style="display:none;">
+
+            <div style="display:flex; justify-content: flex-end; gap:10px; margin-top:15px;">
+                <button type="button" onclick="window.closeGlobalNote()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:8px 20px; border-radius:6px; cursor:pointer; font-family:Cairo; font-size:11.5px; font-weight:700;">إلغاء</button>
+                <button type="button" onclick="window.saveGlobalNote()" style="background:var(--accent-blue); border:none; color:white; padding:8px 20px; border-radius:6px; cursor:pointer; font-family:Cairo; font-size:11.5px; font-weight:800; box-shadow: 0 2px 4px rgba(59,130,246,0.3);">حفظ الملاحظة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة منتج -->
+    <div id="productModal" class="modal" onclick="if(event.target === this) window.closeModal()">
+        <div class="modal-content">
+            <h3>إضافة منتج جديد</h3>
+            <label style="font-size: 11px; font-weight: bold; color: #64748b;">نوع المنتج</label>
+            <select id="p_type" onchange="window.handleTypeChange()">
+                <option value="جوال">جوال</option>
+                <option value="بيانات">بيانات</option>
+                <option value="هاتف">هاتف</option>
+                <option value="فايبر">فايبر</option>
+                <option value="DIA">DIA</option>
+                <option value="SIP Trunk">SIP Trunk</option>
+                <option value="Ipvpn">Ipvpn</option>
+            </select>
+            <label style="font-size: 11px; font-weight: bold; color: #64748b;">تفاصيل المنتج</label>
+            <input type="text" id="p_name" placeholder="تفاصيل المنتج (مثال: باقة 200 جيجا)">
+            <div class="form-row-grid">
+                <div>
+                    <label style="font-size: 11px; font-weight: bold; color: #64748b;">قيمة الاشتراك</label>
+                    <input type="text" id="p_sub" placeholder="قيمة الاشتراك" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');">
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: bold; color: #64748b;">العدد</label>
+                    <input type="text" id="p_qty" value="1" placeholder="العدد" oninput="this.value = this.value.replace(/[\u0660-\u0669]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x0660 + 48)).replace(/[\u06F0-\u06F9]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x06F0 + 48)).replace(/[^0-9]/g, '');">
+                </div>
+            </div>
+            <label style="font-size: 11px; font-weight: bold; color: #64748b;">السريال</label>
+            <div class="serial-wrapper">
+                <input type="text" id="p_serial" placeholder="السريال" oninput="this.value = this.value.replace(/[\u0660-\u0669]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x0660 + 48)).replace(/[\u06F0-\u06F9]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x06F0 + 48)).replace(/[^0-9]/g, '');">
+                <div class="auto-serial-container">
+                    <input type="checkbox" id="auto_serial">
+                    <label for="auto_serial">تسلسل تلقائي</label>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top: 5px;">
+                <button class="btn" style="flex:1; background:var(--header-green); justify-content:center;" onclick="window.saveProduct()">حفظ</button>
+                <button class="btn" style="flex:1; background:var(--danger-red); justify-content:center;" onclick="window.closeModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة لصق بيانات من إكسيل -->
+    <div id="pasteExcelModal" class="modal" onclick="if(event.target === this) window.closePasteExcelModal()">
+        <div class="modal-content" style="max-width: 620px; width: 92%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-soft); padding-bottom: 8px;">
+                <div style="font-weight: 800; font-size: 14px; color: var(--text-dark); display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-excel" style="color: #10b981; font-size: 17px;"></i> لصق بيانات وأعمدة من ملف إكسيل
+                </div>
+                <button onclick="window.closePasteExcelModal()" style="background:none; border:none; color:#64748b; font-size:18px; cursor:pointer;" title="إغلاق">&times;</button>
+            </div>
+
+            <p style="font-size: 11px; color: #64748b; margin: 0 0 8px 0; line-height: 1.5;">
+                انسخ أي عمود أو عدة أعمدة من ملف الإكسيل (Ctrl+C) والصقها هنا، أو يمكنك نسخها والضغط على Ctrl+V مباشرة داخل خلايا الجدول:
+            </p>
+
+            <textarea id="pasteExcelInput" placeholder="الصق محتوى الإكسيل هنا (مثال: أرقام السريال أو أرقام الخدمة أو الحالات)..." style="width: 100%; height: 130px; border: 1.5px dashed var(--accent-blue); border-radius: 8px; padding: 10px; font-family: monospace, 'Cairo', sans-serif; font-size: 11px; resize: vertical; outline: none; background: var(--bg-color); color: var(--text-dark); box-sizing: border-box;" oninput="window.handlePasteModalInput()"></textarea>
+
+            <div style="display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 170px;">
+                    <label style="font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px;">عمود الوجهة الأساسي:</label>
+                    <select id="pasteTargetCol" style="width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-family: 'Cairo'; font-size: 11px; background: var(--white); color: var(--text-dark);">
+                        <option value="auto">التعرف التلقائي الذكي على الأعمدة</option>
+                        <option value="serial">رقم السريال / الكبينة</option>
+                        <option value="mobile">رقم الخدمة / التواصل</option>
+                        <option value="user">هوية المستخدم / المدينة</option>
+                        <option value="status">الحالة</option>
+                        <option value="name">تفاصيل المنتج</option>
+                        <option value="rowNote">سجل المتابعة</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 170px;">
+                    <label style="font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px;">طريقة التطبيق:</label>
+                    <select id="pasteApplyMode" style="width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-family: 'Cairo'; font-size: 11px; background: var(--white); color: var(--text-dark);">
+                        <option value="update_and_append">تحديث الصفوف الحالية بدءاً من الأول ثم إضافة الباقي</option>
+                        <option value="append_only">إضافة جميع السجلات كصفوف جديدة بالكامل</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="pastePreviewSummary" style="margin-top: 10px; padding: 7px 12px; border-radius: 6px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 11px; color: #166534; display: none;">
+                <i class="fas fa-check-circle"></i> <span id="pastePreviewText">تم رصد 0 سطر</span>
+            </div>
+
+            <div style="display:flex; justify-content: flex-end; gap:8px; margin-top: 12px;">
+                <button class="btn" style="background:#94a3b8; color:white; padding:7px 18px; font-size:11.5px; border-radius:6px; border:none; cursor:pointer;" onclick="window.closePasteExcelModal()">إلغاء</button>
+                <button class="btn" style="background:#10b981; color:white; padding:7px 22px; font-size:11.5px; font-weight:800; border-radius:6px; border:none; cursor:pointer;" onclick="window.submitPasteExcelModal()"><i class="fas fa-check"></i> تطبيق في الجدول</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./navbar.js"></script>
+    <script type="module" src="./order_details.js"></script>
+</body>
+</html>

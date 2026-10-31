@@ -1,0 +1,6 @@
+{
+  "name": "نظام ASGate CRM المتكامل",
+  "description": "منظومة ASGate CRM المتكاملة لإدارة المبيعات، الزيارات الميدانية، الفرص البيعية، العملاء، الطلبات والتذكيرات ونظام الإشعارات الفوري.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

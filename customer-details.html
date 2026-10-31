@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تفاصيل العميل | ASGate CRM</title>
+  <meta name="description" content="الملف الشامل لتفاصيل العميل وسجل الطلبات والزيارات والفرص البيعية والمبيعات وفريق التواصل.">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="shortcut icon" href="./favicon.ico">
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js",
+      "chart.js/auto": "https://esm.sh/chart.js@4.4.6/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "xlsx": "https://esm.sh/xlsx@0.18.5"
+    }
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./customer-details.css" />
+</head>
+<body>
+  <div id="navbarPlaceholder"></div>
+
+  <nav class="navbar">
+    <a href="customers.html" class="nav-back-btn">
+      <i class="fas fa-arrow-right"></i> رجوع لقائمة العملاء
+    </a>
+    <div style="font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+      <i class="fas fa-id-card" style="color: #60a5fa;"></i> ملف العميل الشامل
+    </div>
+    <div style="font-size: 11px; opacity: 0.8;">
+      نظام ASGate CRM
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <div class="page-header">
+      <div class="client-title-block">
+        <h1 id="c-name">جاري تحميل بيانات العميل...</h1>
+        <span class="status-badge active"><i class="fas fa-circle"></i> نشط</span>
+      </div>
+      
+      <div class="header-actions">
+        <button type="button" class="btn btn-success" onclick="openNewSalesOrderModal()"><i class="fas fa-cart-plus"></i> إنشاء طلب مبيعات</button>
+        <button class="btn btn-warning" onclick="createNewVisit()"><i class="fas fa-car-side"></i> زيارة ميدانية جديدة</button>
+        <button class="btn btn-primary" onclick="openNoteModal()"><i class="fas fa-plus"></i> إضافة نشاط / ملاحظة</button>
+      </div>
+    </div>
+
+    <section class="section-card">
+      <div class="section-header">
+        <div class="section-title"><i class="fas fa-building" style="color: #2563eb;"></i> بيانات المنشأة والتصنيف</div>
+        <button class="btn btn-outline" onclick="openEditModal()"><i class="fas fa-edit"></i> تعديل البيانات</button>
+      </div>
+      
+      <div class="info-grid">
+        <div class="info-card">
+          <span class="label">كود العميل</span>
+          <strong id="c-code" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">السجل التجاري</span>
+          <strong id="c-cr" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">المدينة</span>
+          <strong id="c-city" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">العنوان / الحي</span>
+          <strong id="c-neighborhood" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">تصنيف العميل</span>
+          <strong id="c-class" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">حالة العميل</span>
+          <strong id="c-status" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">مالك العميل</span>
+          <strong id="c-owner" class="value">-</strong>
+        </div>
+        <div class="info-card">
+          <span class="label">تاريخ الإنشاء</span>
+          <strong id="c-source" class="value">-</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-header">
+        <div class="section-title"><i class="fas fa-users-cog" style="color: #2563eb;"></i> الأشخاص المسؤولون وفريق التواصل</div>
+        <button class="btn btn-outline" onclick="addNewManagerRow()">
+          <i class="fas fa-user-plus"></i> إضافة مسؤول جديد
+        </button>
+      </div>
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;" class="text-center">الرئيسي</th>
+              <th>اسم المسؤول</th>
+              <th>رقم التواصل</th>
+              <th>رقم آخر</th>
+              <th>البريد الإلكتروني</th>
+              <th>المسمى الوظيفي</th>
+              <th>تاريخ الإضافة</th>
+              <th style="width: 90px;" class="text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="managerTableBody">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section-card tabs-section">
+      <div class="tabs-header">
+        <button class="tab-btn active" id="btn-orders" onclick="switchTab('orders')"><i class="fas fa-box"></i> سجل الطلبات</button>
+        <button class="tab-btn" id="btn-visits" onclick="switchTab('visits')"><i class="fas fa-walking"></i> سجل الزيارات</button>
+        <button class="tab-btn" id="btn-opportunities" onclick="switchTab('opportunities')"><i class="fas fa-chart-line"></i> الفرص البيعية</button>
+        <button class="tab-btn" id="btn-sales" onclick="switchTab('sales')"><i class="fas fa-file-invoice-dollar"></i> المبيعات والفواتير</button>
+        <button class="tab-btn" id="btn-attachments" onclick="switchTab('attachments')"><i class="fas fa-paperclip"></i> المرفقات والملفات</button>
+      </div>
+
+      <div class="tab-content-area">
+        <h3 id="tab-title" class="tab-content-title">سجل الطلبات</h3>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr id="tableHeadRow">
+              </tr>
+            </thead>
+            <tbody id="contentBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="noteModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fas fa-sticky-note"></i> تسجيل نشاط / ملاحظة جديدة</h3>
+        <button class="close-btn" onclick="closeNoteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label for="activityNote" class="form-label">تفاصيل النشاط:</label>
+        <textarea id="activityNote" class="form-control" rows="4" placeholder="اكتب تفاصيل الملاحظة هنا..."></textarea>
+        
+        <div class="file-input-wrapper">
+          <label for="fileUpload" class="file-label">
+            <i class="fas fa-paperclip"></i> إرفاق ملف (PDF, Excel, Images)
+          </label>
+          <input type="file" id="fileUpload" onchange="handleFileSelect(this)" hidden />
+          <span id="fileName" class="file-name-display">لم يتم اختيار ملف</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveActivity()">حفظ النشاط</button>
+        <button class="btn btn-outline" onclick="closeNoteModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="editCustomerModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fas fa-edit"></i> تعديل بيانات المنشأة</h3>
+        <button class="close-btn" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <label class="form-label">كود العميل</label>
+        <input type="text" id="editCode" class="form-control" disabled title="لا يمكن تعديل كود العميل لارتباطه بقاعدة البيانات" />
+
+        <label class="form-label">اسم المنشأة</label>
+        <input type="text" id="editComp" class="form-control" />
+        
+        <label class="form-label">السجل التجاري</label>
+        <input type="text" id="editCr" class="form-control" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+        
+        <label class="form-label">المدينة</label>
+        <input type="text" id="editCity" class="form-control" />
+        
+        <label class="form-label">الحي / العنوان</label>
+        <input type="text" id="editAddress" class="form-control" />
+
+        <label class="form-label">تصنيف العميل</label>
+        <select id="editClass" class="form-control">
+            <option value="صغير">صغير</option>
+            <option value="متوسط">متوسط</option>
+            <option value="كبير">كبير</option>
+            <option value="حكومي">حكومي</option>
+            <option value="مهم">مهم</option>
+            <option value="VIP">VIP</option>
+        </select>
+
+        <label class="form-label">حالة العميل</label>
+        <select id="editStatus" class="form-control">
+            <option value="نشط">نشط</option>
+            <option value="جديد">جديد</option>
+            <option value="موقوف مؤقت">موقوف مؤقت</option>
+            <option value="غير نشط">غير نشط</option>
+            <option value="مغلق">مغلق</option>
+        </select>
+
+        <label class="form-label">مالك العميل</label>
+        <input type="text" id="editOwner" class="form-control" />
+
+        <label class="form-label">تاريخ الإنشاء</label>
+        <input type="text" id="editSource" class="form-control" disabled />
+        
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveCustomerEdits(event)">حفظ التعديلات</button>
+        <button class="btn btn-outline" onclick="closeEditModal()">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال إنشاء طلب مبيعات جديد من داخل ملف العميل -->
+  <div id="orderModal" class="modal-overlay" onclick="if(event.target === this) closeOrderModal()">
+    <div class="modal-box" id="orderModalCard" style="max-width: 480px;">
+      <div class="modal-header" style="justify-content: center; position: relative;">
+        <h3 style="font-weight: 800; font-size: 15px; color: var(--text-dark); display: flex; align-items: center; gap: 8px;">
+          <i class="fas fa-file-invoice-dollar" style="color: #2563eb;"></i> إنشاء طلب مبيعات جديد
+        </h3>
+        <button class="close-btn" onclick="closeOrderModal()" style="position: absolute; left: 16px; top: 16px;">&times;</button>
+      </div>
+      
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px;">
+        <div class="form-group">
+          <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">الشركة</label>
+          <input type="text" id="mComp" readonly style="width: 100%; background: #f8fafc; color: #1e293b; font-weight: 800; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-family: 'Cairo', sans-serif; font-size: 13px; cursor: not-allowed; box-sizing: border-box;">
+        </div>
+        
+        <div class="form-group">
+          <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">السجل التجاري</label>
+          <input type="text" id="mCr" readonly style="width: 100%; background: #f8fafc; color: #64748b; font-weight: 700; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-family: 'Cairo', sans-serif; font-size: 12px; cursor: not-allowed; box-sizing: border-box;">
+        </div>
+        
+        <div class="form-group">
+          <label style="display: block; font-size: 11.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">اسم الطلب *</label>
+          <input type="text" id="mType" placeholder="مثال: توريد وتجهيز سنترال وباقات اتصالات" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-family: 'Cairo', sans-serif; font-size: 12.5px; outline: none; box-sizing: border-box;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); submitNewSalesOrder(); }">
+        </div>
+      </div>
+      
+      <div class="modal-footer" style="display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid #e2e8f0; background: #fafafa; border-radius: 0 0 16px 16px;">
+        <button class="btn btn-outline" onclick="closeOrderModal()" style="flex: 1; padding: 10px;">إلغاء</button>
+        <button class="btn btn-primary" onclick="submitNewSalesOrder()" style="flex: 1; padding: 10px; background: #2563eb; color: white; border: none; font-weight: 800; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);">
+          <i class="fas fa-plus"></i> إضافة الطلب
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./navbar.js"></script>
+  <script type="module" src="./customer-details.js"></script>
+</body>
+</html>
